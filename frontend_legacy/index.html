@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FlashFloodWarning - Village-Level Early Warning System</title>
+    
+    <!-- Leaflet GIS Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sticky Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon">🌊</div>
+                <div>
+                    <div class="brand-title">FlashFloodWarning</div>
+                    <div class="brand-subtitle">Village Early Warning System</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-audio-toggle" class="btn-icon" title="Toggle Emergency Siren Audio">🔇</button>
+                <button id="btn-siren-indicator" class="btn-icon btn-siren" title="Emergency Siren Active">🚨</button>
+                <button id="btn-refresh" class="btn-icon" title="Refresh Live Ingestion">🔄</button>
+                <button id="btn-toggle-view" class="btn-icon" title="Toggle Desktop/Mobile View" style="width: auto; padding: 0 8px; font-size: 11px;">🖥️ Expand</button>
+            </div>
+        </header>
+
+        <!-- Emergency Alert Ticker -->
+        <div id="alert-ticker" class="alert-ticker hidden">
+            <div class="ticker-dot"></div>
+            <div id="ticker-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                CRITICAL WARNING: High Flash Flood Risk Detected
+            </div>
+        </div>
+
+        <!-- Main Scrollable Body -->
+        <main class="app-content">
+
+            <!-- TAB 1: MONITOR DASHBOARD -->
+            <section id="tab-monitor" class="tab-screen active">
+                
+                <!-- Village Selector -->
+                <div class="village-selector-card">
+                    <div class="chips-row">
+                        <div class="chip active" data-state="All">All India</div>
+                        <div class="chip" data-state="Tamil Nadu">Tamil Nadu</div>
+                        <div class="chip" data-state="Kerala">Kerala</div>
+                        <div class="chip" data-state="Uttarakhand">Uttarakhand</div>
+                        <div class="chip" data-state="Assam">Assam</div>
+                        <div class="chip" data-state="Maharashtra">Maharashtra</div>
+                        <div class="chip" data-state="Himachal Pradesh">Himachal</div>
+                    </div>
+                    <div class="select-wrapper">
+                        <select id="village-select" class="village-select">
+                            <option value="">Loading villages...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Risk Hero Card with Probability Gauge -->
+                <div id="risk-hero-card" class="risk-hero-card low">
+                    <div id="location-label" class="location-badge">📍 Coonoor Valley, The Nilgiris (Tamil Nadu)</div>
+                    
+                    <div class="gauge-wrapper">
+                        <svg class="gauge-svg" viewBox="0 0 160 160">
+                            <circle class="gauge-bg" cx="80" cy="80" r="70"></circle>
+                            <circle id="gauge-progress" class="gauge-progress" cx="80" cy="80" r="70"></circle>
+                        </svg>
+                        <div class="gauge-center-content">
+                            <div>
+                                <span id="gauge-pct" class="gauge-pct">0</span><span class="gauge-unit">%</span>
+                            </div>
+                            <div class="gauge-label">Flood Probability</div>
+                        </div>
+                    </div>
+
+                    <div id="risk-pill" class="risk-pill low">LOW</div>
+                    <div class="forecast-window-tag">Target Window: Next 1–3 Hours</div>
+                </div>
+
+                <!-- Official Emergency Bulletin -->
+                <div class="bulletin-box">
+                    <div id="bulletin-headline" class="bulletin-headline">🟢 Normal Seasonal Flow</div>
+                    <ul id="bulletin-list" class="bulletin-list">
+                        <li>Water levels and drainage streams are within standard thresholds.</li>
+                    </ul>
+                </div>
+
+                <!-- Live Environmental & Telemetry Metrics Grid -->
+                <div class="section-title">
+                    <span>Live Environmental Observations</span>
+                    <span id="last-updated-text" style="font-size: 11px; color: #94a3b8; font-weight: normal;">Just now</span>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">1h Rainfall</span>
+                            <span class="metric-icon">🌧️</span>
+                        </div>
+                        <div id="metric-rain-1h" class="metric-value">12.0 mm</div>
+                        <div id="metric-rain-24h" class="metric-trend trend-flat">Past 24h: 45.0 mm</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">River Level</span>
+                            <span class="metric-icon">🌊</span>
+                        </div>
+                        <div id="metric-river-level" class="metric-value">1.85 m</div>
+                        <div id="metric-river-trend" class="metric-trend trend-flat">→ Stable</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Soil Moisture</span>
+                            <span class="metric-icon">🌱</span>
+                        </div>
+                        <div id="metric-soil-moisture" class="metric-value">48%</div>
+                        <div class="metric-trend trend-flat">Normal Infiltration</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Runoff Index</span>
+                            <span class="metric-icon">⚡</span>
+                        </div>
+                        <div id="metric-runoff-index" class="metric-value">14.2</div>
+                        <div class="metric-trend trend-flat">Q = C·I·A Model</div>
+                    </div>
+                </div>
+
+                <!-- Primary AI Drivers -->
+                <div class="section-title">Key Risk Drivers</div>
+                <div id="explain-factors-list" class="factors-container">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+
+            <!-- TAB 2: GIS MAP -->
+            <section id="tab-map" class="tab-screen">
+                <div class="section-title">Geographical Information & Catchment</div>
+                <div id="map" class="map-container"></div>
+                
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0284c7;"></div>
+                        <span>Village Center</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(239, 68, 68, 0.4); border: 1px dashed red;"></div>
+                        <span>Upstream Catchment Polygon</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #38bdf8;"></div>
+                        <span>Drainage Stream</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #059669;"></div>
+                        <span>Evacuation Shelter</span>
+                    </div>
+                </div>
+
+                <div class="bulletin-box">
+                    <div class="bulletin-headline">🏔️ Terrain & Drainage Profile</div>
+                    <ul class="bulletin-list">
+                        <li><strong>DEM Elevation:</strong> Water naturally drains toward the lowest point in this sub-basin.</li>
+                        <li><strong>Slope Dynamics:</strong> Steeper mountain slopes dramatically accelerate runoff velocity.</li>
+                        <li><strong>Catchment Area:</strong> All rainfall within the upstream polygon drains towards the village stream channel.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- TAB 3: IOT SENSOR STATION & SIMULATOR -->
+            <section id="tab-iot" class="tab-screen">
+                <div class="section-title">Edge IoT Telemetry Station</div>
+                <div class="simulator-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <strong id="iot-station-id" style="font-size: 14px;">ESP32-LOCAL-01</strong>
+                            <div style="font-size: 11px; color: #94a3b8;">LoRaWAN / GSM Edge Station</div>
+                        </div>
+                        <span id="iot-station-status" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">ONLINE</span>
+                    </div>
+                    <div class="metrics-grid" style="margin-bottom: 0;">
+                        <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #94a3b8;">Station Battery</div>
+                            <div id="iot-station-battery" style="font-size: 14px; font-weight: bold; color: #fff;">3.95 V</div>
+                        </div>
+                        <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #94a3b8;">Signal Strength</div>
+                            <div id="iot-station-rssi" style="font-size: 14px; font-weight: bold; color: #fff;">-72 dBm</div>
+                        </div>
+                        <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #94a3b8;">Gauge Rain 1h</div>
+                            <div id="iot-telemetry-rain" style="font-size: 14px; font-weight: bold; color: #fff;">12 mm</div>
+                        </div>
+                        <div style="background: #0f172a; padding: 8px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #94a3b8;">Water Level Sensor</div>
+                            <div id="iot-telemetry-level" style="font-size: 14px; font-weight: bold; color: #fff;">1.85 m</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title">Interactive Sensor & Scenario Simulator</div>
+                <div class="simulator-card">
+                    <div class="simulator-disclaimer">
+                        <span>ℹ️</span>
+                        <span>IoT data is simulated for the prototype; the architecture supports real ESP32/LoRa/GSM sensors.</span>
+                    </div>
+
+                    <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 8px;">Quick Test Scenarios:</div>
+                    <div class="preset-buttons-grid">
+                        <button id="preset-dry" class="btn-preset active">
+                            <span>☀️ Dry Day</span>
+                            <span style="font-size: 10px; color: #94a3b8;">0mm rain, base stream</span>
+                        </button>
+                        <button id="preset-moderate" class="btn-preset">
+                            <span>🌧️ Monsoon</span>
+                            <span style="font-size: 10px; color: #94a3b8;">18mm rain, steady stream</span>
+                        </button>
+                        <button id="preset-heavy" class="btn-preset">
+                            <span>⛈️ Heavy Rain</span>
+                            <span style="font-size: 10px; color: #94a3b8;">54mm rain, surging stream</span>
+                        </button>
+                        <button id="preset-cloudburst" class="btn-preset">
+                            <span>⚡ Cloudburst</span>
+                            <span style="font-size: 10px; color: #ef4444;">88mm rain, flash emergency</span>
+                        </button>
+                    </div>
+
+                    <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 10px;">Fine-Tune Sensor Readings:</div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Local 1-Hour Rainfall:</span>
+                            <strong id="val-sim-rain">18 mm</strong>
+                        </div>
+                        <input id="sim-rain" type="range" class="range-slider" min="0" max="120" value="18" step="1">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>River Water Level:</span>
+                            <strong id="val-sim-river">2.3 m</strong>
+                        </div>
+                        <input id="sim-river" type="range" class="range-slider" min="0.5" max="7.0" value="2.3" step="0.1">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>River Rate of Rise:</span>
+                            <strong id="val-sim-rise">+0.15 m/h</strong>
+                        </div>
+                        <input id="sim-rise" type="range" class="range-slider" min="-0.5" max="1.5" value="0.15" step="0.05">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Soil Moisture Saturation:</span>
+                            <strong id="val-sim-soil">62%</strong>
+                        </div>
+                        <input id="sim-soil" type="range" class="range-slider" min="10" max="100" value="62" step="1">
+                    </div>
+
+                    <button id="btn-apply-sim" class="btn-apply-sim">Apply Scenario to Model</button>
+                </div>
+            </section>
+
+            <!-- TAB 4: AI EXPLAINABILITY -->
+            <section id="tab-explain" class="tab-screen">
+                <div class="section-title">AI Flash Flood Prediction Model</div>
+                <div class="bulletin-box">
+                    <div class="bulletin-headline">🧠 Model Architecture & Methodology</div>
+                    <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 8px;">
+                        The model utilizes a <strong>Calibrated Random Forest Ensemble</strong> trained on historical flood events across India. It integrates 20 hydrologically engineered features into a single continuous probability score (0% to 100%) for the critical 1–3 hour flash flood lead window.
+                    </p>
+                    <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                        Unlike standard weather reports that report only rainfall volume, this system accounts for <em>how rainfall interacts with local terrain</em> (upstream catchment size, DEM slope, clay saturation, and river surge velocity).
+                    </p>
+                </div>
+
+                <div class="section-title">Hydrological Physics: The Rational Method</div>
+                <div class="simulator-card" style="font-size: 12px; color: #cbd5e1; line-height: 1.6;">
+                    <code style="display: block; background: #0f172a; padding: 10px; border-radius: 8px; color: #38bdf8; font-family: monospace; font-size: 13px; margin-bottom: 8px;">
+                        Peak Discharge: Q = C × I × A
+                    </code>
+                    <strong>Where:</strong>
+                    <ul style="padding-left: 18px; margin-top: 6px;">
+                        <li><strong>C (Runoff Coefficient):</strong> Dependent on soil clay % and moisture saturation.</li>
+                        <li><strong>I (Rainfall Intensity):</strong> 1-hour cloudburst rate in mm/hr.</li>
+                        <li><strong>A (Catchment Area):</strong> Total upstream drainage basin in km².</li>
+                    </ul>
+                </div>
+
+                <div class="section-title">Decision Threshold Policy</div>
+                <div class="metrics-grid">
+                    <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--risk-low); padding: 10px; border-radius: 10px;">
+                        <strong style="color: var(--risk-low);">0 – 30%</strong>
+                        <div style="font-size: 11px; color: #cbd5e1;">LOW RISK: Safe conditions</div>
+                    </div>
+                    <div style="background: rgba(234, 179, 8, 0.15); border: 1px solid var(--risk-moderate); padding: 10px; border-radius: 10px;">
+                        <strong style="color: var(--risk-moderate);">30 – 60%</strong>
+                        <div style="font-size: 11px; color: #cbd5e1;">MODERATE: Stay alert</div>
+                    </div>
+                    <div style="background: rgba(249, 115, 22, 0.15); border: 1px solid var(--risk-high); padding: 10px; border-radius: 10px;">
+                        <strong style="color: var(--risk-high);">60 – 80%</strong>
+                        <div style="font-size: 11px; color: #cbd5e1;">HIGH: Evacuate low ground</div>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--risk-very-high); padding: 10px; border-radius: 10px;">
+                        <strong style="color: var(--risk-very-high);">80 – 100%</strong>
+                        <div style="font-size: 11px; color: #cbd5e1;">VERY HIGH: Immediate emergency</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: EVACUATION & SHELTERS -->
+            <section id="tab-shelters" class="tab-screen">
+                <div class="section-title">Designated Evacuation Shelters</div>
+                <div id="shelters-list">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div class="section-title" style="margin-top: 20px;">Emergency Disaster Helplines</div>
+                <div class="simulator-card" style="padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 13px; font-weight: bold;">National Disaster Response Force (NDRF)</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Nationwide 24/7 Control Room</div>
+                        </div>
+                        <a href="tel:1078" class="btn-call">📞 1078</a>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 13px; font-weight: bold;">State Emergency Operations (SEOC)</div>
+                            <div style="font-size: 11px; color: #94a3b8;">State Disaster Management</div>
+                        </div>
+                        <a href="tel:1070" class="btn-call">📞 1070</a>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 13px; font-weight: bold;">District Disaster Management</div>
+                            <div style="font-size: 11px; color: #94a3b8;">District Collector Control Room</div>
+                        </div>
+                        <a href="tel:1077" class="btn-call">📞 1077</a>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                        <div>
+                            <div style="font-size: 13px; font-weight: bold;">National Emergency Response System</div>
+                            <div style="font-size: 11px; color: #94a3b8;">Police, Fire, Emergency</div>
+                        </div>
+                        <a href="tel:112" class="btn-call">📞 112</a>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Fixed Bottom Mobile Navigation Bar -->
+        <nav class="bottom-nav">
+            <button id="nav-monitor" class="nav-item active" data-tab="monitor">
+                <span class="nav-icon">📱</span>
+                <span>Monitor</span>
+            </button>
+            <button id="nav-map" class="nav-item" data-tab="map">
+                <span class="nav-icon">🗺️</span>
+                <span>GIS Map</span>
+            </button>
+            <button id="nav-iot" class="nav-item" data-tab="iot">
+                <span class="nav-icon">📡</span>
+                <span>IoT & Sim</span>
+            </button>
+            <button id="nav-explain" class="nav-item" data-tab="explain">
+                <span class="nav-icon">🧠</span>
+                <span>AI Explain</span>
+            </button>
+            <button id="nav-shelters" class="nav-item" data-tab="shelters">
+                <span class="nav-icon">🛡️</span>
+                <span>Shelters</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/js/map.js"></script>
+    <script src="/static/js/simulator.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
