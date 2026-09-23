@@ -75,8 +75,7 @@ export const RainfallChart: React.FC<RainfallChartProps> = ({
             <Tooltip
               contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
               labelStyle={{ color: '#94a3b8' }}
-              formatter={(val: number) => [`${val} ${unit === 'mm' ? 'mm' : 'mm/hr'}`, unit === 'mm' ? 'Precipitation' : 'Intensity Rate']}
-            />
+             formatter={(val) => [`${Number(val ?? 0)} ${unit === 'mm' ? 'mm' : 'mm/hr'}`, unit === 'mm' ? 'Precipitation' : 'Intensity Rate']}
             <Bar dataKey={unit === 'mm' ? 'value' : 'rate'} radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell 
