@@ -72,18 +72,38 @@ export const RainfallChart: React.FC<RainfallChartProps> = ({
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="period" stroke="#64748b" fontSize={10} tickLine={false} />
             <YAxis stroke="#64748b" fontSize={10} />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
-              labelStyle={{ color: '#94a3b8' }}
-             formatter={(val) => [`${Number(val ?? 0)} ${unit === 'mm' ? 'mm' : 'mm/hr'}`, unit === 'mm' ? 'Precipitation' : 'Intensity Rate']}
-            <Bar dataKey={unit === 'mm' ? 'value' : 'rate'} radius={[4, 4, 0, 0]}>
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.isForecast ? '#38bdf8' : (entry.value > 100 ? '#ef4444' : '#2563eb')} 
-                />
-              ))}
-            </Bar>
+
+<Tooltip
+  contentStyle={{
+    backgroundColor: '#0f172a',
+    borderColor: '#334155',
+    borderRadius: '8px',
+    fontSize: '12px'
+  }}
+  labelStyle={{ color: '#94a3b8' }}
+  formatter={(val) => [
+    `${Number(val ?? 0)} ${unit === 'mm' ? 'mm' : 'mm/hr'}`,
+    unit === 'mm' ? 'Precipitation' : 'Intensity Rate'
+  ]}
+/>
+
+<Bar
+  dataKey={unit === 'mm' ? 'value' : 'rate'}
+  radius={[4, 4, 0, 0]}
+>
+  {data.map((entry, index) => (
+    <Cell
+      key={`cell-${index}`}
+      fill={
+        entry.isForecast
+          ? '#38bdf8'
+          : entry.value > 100
+            ? '#ef4444'
+            : '#2563eb'
+      }
+    />
+  ))}
+</Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
